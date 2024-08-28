@@ -1,0 +1,30 @@
+body {
+	background-color: #e8e8e8;
+	font-family: arial;
+	font-size: 12px;
+}
+.main-wrap {
+	width: 300px;
+	margin: auto;
+	padding: 10px 20px 50px 20px;
+	background-color: white;
+}
+h1 {
+	color: #00528a;
+	font-family: arial;
+	font-weight: 400;
+}
+.getResults {
+    background-color: #00a0dd;
+    color: white;
+    padding: 10px 20px;
+    border: 0px;
+    width: 100%;
+}
+input {
+	width:97%;
+}
+.loader {
+	text-align: center;
+	padding-top: 30px;
+}

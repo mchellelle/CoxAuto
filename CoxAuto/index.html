@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+	<div class="main-wrap">
+	<h1>Cox Automotive</h1>
+	 <button class="getResults" onclick="getID()">Get Results</button>
+	 <!--<pre id="arrPrint"></pre>-->
+	 <div class="loader">
+	 	<img src="css/loading.gif" width="20%">
+	 </div>
+	 <BR><BR>
+	 <div class="vehiclesFound">
+	 <label for="tDealers">Vehicles Found</label><BR>
+	 <input type="text" id="tDealers" name="tDealers">
+	 <BR>
+	 </div>
+	 <div class="results">
+	 <label for="success">Success</label><BR>
+	 <input type="text" id="success" name="success">
+	 <BR>
+	 <label for="message">Message</label><BR>
+	 <input type="text" id="message" name="message">
+	 <BR>
+	 <label for="tTime">Total Time</label><BR>
+	 <input type="text" id="tTime" name="tTime">
+	 </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+<Script>
+	$('.loader').hide();
+	$('.vehiclesFound').hide();
+	$('.results').hide();
+var dealerIds = [];
+var years = [];
+var make = [];
+var models = [];
+var datasetID;
+var cars;
+var carIDs = [];
+var tVehicles;
+
+//Get dataset
+function getID() {	
+	$('.loader').show();
+	var settings = {
+	  "url": "http://api.coxauto-interview.com/api/datasetId",
+	  "method": "GET",
+	  "timeout": 0,
+	};
+
+	$.ajax(settings).done(function (response) {
+	  datasetID = response.datasetId;
+	getVehicles(datasetID);
+	});
+}
+
+
+//Get all vehicles
+function getVehicles(datasetID) {
+	var settings = {
+	  "url": "http://api.coxauto-interview.com/api/" + datasetID + "/vehicles",
+	  "method": "GET",
+	  "timeout": 0,
+	  "headers": {
+	    "accept": "application/json"
+	  },
+	};
+
+	$.ajax(settings).done(function (responseB) {
+
+		cars = responseB.vehicleIds;
+		//document.getElementById("tCars").value = cars.length;
+
+		// Get Dealer ID
+		for (i = 0; i < cars.length; i++){	
+			getDealerId(i, responseB, datasetID);
+		};	
+	});		
+};
+
+
+
+//Get Dealer ID
+function getDealerId(i, responseB, datasetID, vID) {
+
+			var vID = responseB.vehicleIds[i];
+			tVehicles = responseB.vehicleIds.length;
+
+			var settings = { 
+				"url": "http://api.coxauto-interview.com/api/" + datasetID + "/vehicles/" + vID, 
+				"method": "GET", 
+				"timeout": 0, 
+			}; 
+
+			$.ajax(settings).done(function (responseC) { 
+ 				dealerIds.push(responseC.dealerId);
+				years.push(responseC.year);
+ 				make.push(responseC.make);
+ 				models.push(responseC.model);
+ 				carIDs.push(responseC.vehicleId);
+ 				document.getElementById("tDealers").value = dealerIds.length;
+ 				if( dealerIds.length == tVehicles ){
+ 					$('#tDealers').change();
+ 				}
+ 			});
+};
+
+ 
+ $('#tDealers').change(function(){
+ 	if( $('#tDealers').val() == tVehicles ){
+ 					$('.vehiclesFound').show();
+ 					let nDealers = [...new Set(dealerIds)];
+ 					//console.log(nDealers);
+					var dealerInfo = [];
+					
+					// Get Dealer Name
+					index = 0
+					getDealer();
+
+					function getDealer() {
+						
+						var settings = { 
+							"url": "http://api.coxauto-interview.com/api/" + datasetID + "/dealers/" + nDealers[index], 
+							"method": "GET", 
+							"timeout": 0, 
+						}; 
+						$.ajax(settings).done(function (responseD) { 
+							dealerInfo[index] =  {
+								dealerID: responseD.dealerId,
+								dealerName: responseD.name,
+
+							}
+							++index;
+							if ( index < 3){
+								
+							getDealer(dealerInfo);
+							}
+							else {
+								getResults();
+							}
+						});
+					}
+
+
+
+					function getResults() {
+									var dealers = [];
+									var vehicles = [];
+									// For each dealer
+									for (j = 0; j < nDealers.length; j++){
+										// For each car
+										for (k = 0; k < cars.length; k++){
+											// If car's dealer ID matches the current dealer
+											if ( dealerIds[k] == nDealers[j] ) {
+												// Add car to list
+												vehicles.push({
+										 		vehicleId: carIDs[k],
+										 		year: years[k],
+										 		make: make[k],
+										 		model: models[k]
+										 		})
+											}
+											else {}
+										};
+										// Add vehicles to dealer
+										nDealers[j] = {
+											dealerId: nDealers[j],
+											name: dealerInfo[j].dealerName,
+											vehicles: vehicles
+										};
+										vehicles = [];
+									}	
+									dealers[0] = {dealers: nDealers};
+
+									//document.getElementById("arrPrint").innerHTML = JSON.stringify(dealers[0], null, 2);
+
+					   				var settings = {
+								  	"url": "http://api.coxauto-interview.com/api/" + datasetID + "/answer",
+								  	"method": "POST",
+								  	"timeout": 0,
+								  	"headers": {
+								    	"Content-Type": "application/json"
+								  	},
+								  	"data": JSON.stringify(dealers[0], null, 2),
+									};
+
+									$.ajax(settings).done(function (responseZ) {
+										var fTime = responseZ.totalMilliseconds/1000
+								  	document.getElementById("success").value = responseZ.success;
+								  	document.getElementById("message").value = responseZ.message;
+								  	document.getElementById("tTime").value = fTime + " seconds";
+								  	$('.loader').hide();
+								  	$('.results').show();
+									});
+					 }
+ 	}
+ 	else{}
+ });
+
+
+</Script>
+</body>
+</html>
